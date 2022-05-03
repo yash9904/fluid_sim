@@ -1,7 +1,8 @@
 #
 # 2D flow around a cylinder
 #
-
+import os
+import cv2
 from numpy import array, zeros, fromfunction, sin, roll, sqrt, pi
 import numpy as np
 import matplotlib.pyplot as plt
@@ -97,8 +98,7 @@ for time in tqdm(range(maxIter)):
         plt.imshow(sqrt(u[0]**2+u[1]**2).transpose(), cmap=cm.Reds)
         plt.savefig("sim_frames/vel.{0:04d}.png".format(time//100))
         
-import os
-import cv2
+
 from tqdm import tqdm
 
 result = cv2.VideoWriter(f'simulation_re{Re}t{maxIter}.avi', 
