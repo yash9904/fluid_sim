@@ -1,2 +1,2 @@
-# 2D Fluid Simulation with a cyllindrical obstacle
+# 2D Fluid flow around a cyllindrical obstacle
 ## Lattice Boltzmann Method
