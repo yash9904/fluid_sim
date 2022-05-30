@@ -51,6 +51,10 @@ def equilibrium(rho, u):              # Equilibrium distribution function.
 def obstacle_fun(x, y):
     return (x-cx)**2+(y-cy)**2<r**2
 
+# uncomment for a square cyllinder obstacle
+#def obstacle_fun(x, y):
+    #return np.abs(x - cx + y - cy) + np.abs(x - cx - y + cy) <= 50
+
 obstacle = fromfunction(obstacle_fun, (nx,ny))
 
 # Initial velocity profile: almost zero, with a slight perturbation to trigger
