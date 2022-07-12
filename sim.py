@@ -1,23 +1,28 @@
 #
 # 2D flow around a cylinder
 #
+#%%
 import os
 import cv2
-from numpy import array, zeros, fromfunction, sin, roll, sqrt, pi
 import numpy as np
+from numpy import array, zeros, fromfunction, sin, roll, sqrt, pi
 import matplotlib.pyplot as plt
-from matplotlib import cm
+import matplotlib as mpl
+#from matplotlib import cm
 from tqdm import tqdm
 
+mpl.rcParams['figure.max_open_warning'] = 0
+
+#%%
 ###### Flow definition #########################################################
 maxIter = 50000 # Total number of time iterations.
 Re = 220.0         # Reynolds number.
-nx, ny = 420, 180 # Numer of lattice nodes.
+nx, ny = 840, 360 # Numer of lattice nodes.
 ly = ny-1         # Height of the domain in lattice units.
 cx, cy, r = nx//4, ny//2, ny//9 # Coordinates of the cylinder.
 uLB     = 0.04                  # Velocity in lattice units.
-nulb    = uLB*r/Re;             # Viscoscity in lattice units.
-omega = 1 / (3*nulb+0.5);    # Relaxation parameter.
+nulb    = uLB * r/Re;             # Viscoscity in lattice units.
+omega = 1 / (3 * nulb + 0.5);    # Relaxation parameter.
 
 ###### Lattice Constants #######################################################
 v = array([ [ 1,  1], [ 1,  0], [ 1, -1], [ 0,  1], [ 0,  0],
@@ -28,13 +33,19 @@ col1 = array([0, 1, 2])
 col2 = array([3, 4, 5])
 col3 = array([6, 7, 8])
 
+frames_dir = 'square_sim_frames'
+
+if not(os.path.isdir(frames_dir)):
+    os.mkdir(frames_dir)
+
+#%%
 ###### Function Definitions ####################################################
 def macroscopic(fin):
     rho = np.sum(fin, axis=0)
     u = zeros((2, nx, ny))
     for i in range(9):
-        u[0,:,:] += v[i,0] * fin[i,:,:]
-        u[1,:,:] += v[i,1] * fin[i,:,:]
+        u[0, :, :] += v[i, 0] * fin[i, :, :]
+        u[1, :, :] += v[i, 1] * fin[i, :, :]
     u /= rho
     return rho, u
 
@@ -42,46 +53,48 @@ def equilibrium(rho, u):              # Equilibrium distribution function.
     usqr = 3/2 * (u[0]**2 + u[1]**2)
     feq = zeros((9,nx,ny))
     for i in range(9):
-        cu = 3 * (v[i,0]*u[0,:,:] + v[i,1]*u[1,:,:])
-        feq[i,:,:] = rho*t[i] * (1 + cu + 0.5*cu**2 - usqr)
+        cu = 3 * (v[i, 0]*u[0, :, :] + v[i, 1]*u[1, :, :])
+        feq[i, :, :] = rho*t[i] * (1 + cu + 0.5*cu**2 - usqr)
     return feq
 
 ###### Setup: cylindrical obstacle and velocity inlet with perturbation ########
 # Creation of a mask with 1/0 values, defining the shape of the obstacle.
-def obstacle_fun(x, y):
-    return (x-cx)**2+(y-cy)**2<r**2
-
-# uncomment for a square cyllinder obstacle
 #def obstacle_fun(x, y):
-    #return np.abs(x - cx + y - cy) + np.abs(x - cx - y + cy) <= 50
+    #return (x-cx)**2+(y-cy)**2<r**2
 
-obstacle = fromfunction(obstacle_fun, (nx,ny))
+def obstacle_fun(x, y):
+    return np.abs(x - cx + y - cy) + np.abs(x - cx - y + cy) <= 50
+
+
 
 # Initial velocity profile: almost zero, with a slight perturbation to trigger
 # the instability.
 def inivel(d, x, y):
-    return (1-d) * uLB * (1 + 1e-4*sin(y/ly*2*pi))
+    return (1 - d) * uLB * (1 + 1e-4*sin(y/ly*2*pi))
+#%%
 
-vel = fromfunction(inivel, (2,nx,ny))
+obstacle = fromfunction(obstacle_fun, (nx, ny))
+vel = fromfunction(inivel, (2,nx, ny))
 
 # Initialization of the populations at equilibrium with the given velocity.
 fin = equilibrium(1, vel)
 
+#%%
 ###### Main time loop ##########################################################
 for time in tqdm(range(maxIter)):
     # Right wall: outflow condition.
-    fin[col3,-1,:] = fin[col3,-2,:] 
+    fin[col3, -1, :] = fin[col3, -2, :] 
 
     # Compute macroscopic variables, density and velocity.
     rho, u = macroscopic(fin)
 
     # Left wall: inflow condition.
-    u[:,0,:] = vel[:,0,:]
-    rho[0,:] = 1/(1-u[0,0,:]) * ( np.sum(fin[col2,0,:], axis=0) +
-                                  2*np.sum(fin[col3,0,:], axis=0) )
+    u[:, 0, :] = vel[:, 0, :]
+    rho[0, :] = 1/(1-u[0, 0, :]) * ( np.sum(fin[col2, 0, :], axis = 0) +
+                                  2*np.sum(fin[col3, 0, :], axis = 0) )
     # Compute equilibrium.
     feq = equilibrium(rho, u)
-    fin[[0,1,2],0,:] = feq[[0,1,2],0,:] + fin[[8,7,6],0,:] - feq[[8,7,6],0,:]
+    fin[[0, 1, 2], 0, :] = feq[[0, 1, 2], 0, :] + fin[[8, 7, 6], 0, :] - feq[[8, 7, 6], 0, :]
 
     # Collision step.
     fout = fin - omega * (fin - feq)
@@ -92,24 +105,31 @@ for time in tqdm(range(maxIter)):
 
     # Streaming step.
     for i in range(9):
-        fin[i,:,:] = roll(
-                            roll(fout[i,:,:], v[i,0], axis=0),
-                            v[i,1], axis=1 )
- 
+        fin[i, :, :] = roll(roll(fout[i, :, :], v[i, 0], axis = 0), v[i, 1], axis = 1)
+    
     # Visualization of the velocity.
-    if (time%100==0):
+    if (time%25 == 0):
+        fig = plt.figure(figsize = (20, 10))
         plt.clf()
-        plt.imshow(sqrt(u[0]**2+u[1]**2).transpose(), cmap=cm.Reds)
-        plt.savefig("sim_frames/vel.{0:04d}.png".format(time//100))
+        plt.imshow(sqrt(u[0]**2+u[1]**2).transpose(), cmap = 'magma')
+        plt.xticks([])
+        plt.yticks([])
+        plt.close(fig)
+        plt.savefig("square_sim_frames/vel.{0:05d}.png".format(time//25))
         
+#%%
+imshape = cv2.imread(os.path.join(frames_dir, os.listdir(frames_dir)[0])).shape
+imshape = (imshape[1], imshape[0])
 
-from tqdm import tqdm
 
-result = cv2.VideoWriter(f'simulation_re{Re}t{maxIter}.avi', 
-                         cv2.VideoWriter_fourcc(*'MJPG'),
-                         10, (432, 288))
+if not os.path.isdir(frames_dir):
+    os.mkdir(frames_dir)
 
-for file in tqdm(sorted(os.listdir('sim_frames'))):
-    image = cv2.imread(os.path.join('sim_frames', file))
+result = cv2.VideoWriter(f'square_simulation_re{Re}t{maxIter}.mp4', 
+                         cv2.VideoWriter_fourcc(*'MP4V'),
+                         20, imshape)
+
+for file in tqdm(sorted(os.listdir(frames_dir))):
+    image = cv2.imread(os.path.join(frames_dir, file))
     result.write(image)
 result.release()
