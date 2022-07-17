@@ -124,7 +124,7 @@ for time in tqdm(range(maxIter)):
         
 
         clb = fig.colorbar(im, cax=cax)
-        clb.set_label('Velocity Magnitude', rotation=270)
+        clb.set_label('Velocity Magnitude', rotation = 270, labelpad = 20)
         
         plt.xticks([])
         plt.yticks([])
