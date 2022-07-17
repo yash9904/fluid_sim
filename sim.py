@@ -8,6 +8,9 @@ import numpy as np
 from numpy import array, zeros, fromfunction, sin, roll, sqrt, pi
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+from datetime import datetime
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 #from matplotlib import cm
 from tqdm import tqdm
 
@@ -19,7 +22,7 @@ maxIter = 50000 # Total number of time iterations.
 Re = 220.0         # Reynolds number.
 nx, ny = 840, 360 # Numer of lattice nodes.
 ly = ny-1         # Height of the domain in lattice units.
-cx, cy, r = nx//4, ny//2, ny//9 # Coordinates of the cylinder.
+cx, cy, r = nx//4, ny//2, ny//9 # Coordinates of the cylinder/square.
 uLB     = 0.04                  # Velocity in lattice units.
 nulb    = uLB * r/Re;             # Viscoscity in lattice units.
 omega = 1 / (3 * nulb + 0.5);    # Relaxation parameter.
@@ -33,7 +36,8 @@ col1 = array([0, 1, 2])
 col2 = array([3, 4, 5])
 col3 = array([6, 7, 8])
 
-frames_dir = 'square_sim_frames'
+now = datetime.now().strftime("%d%m%Y_%H%M%S")
+frames_dir = 'square_sim_frames' + now
 
 if not(os.path.isdir(frames_dir)):
     os.mkdir(frames_dir)
@@ -63,7 +67,7 @@ def equilibrium(rho, u):              # Equilibrium distribution function.
     #return (x-cx)**2+(y-cy)**2<r**2
 
 def obstacle_fun(x, y):
-    return np.abs(x - cx + y - cy) + np.abs(x - cx - y + cy) <= 50
+    return (np.abs(x - cx + y - cy) + np.abs(x - cx - y + cy) <= 50) + (y == 0) + (y == ny - 1)
 
 
 
@@ -108,14 +112,24 @@ for time in tqdm(range(maxIter)):
         fin[i, :, :] = roll(roll(fout[i, :, :], v[i, 0], axis = 0), v[i, 1], axis = 1)
     
     # Visualization of the velocity.
-    if (time%25 == 0):
+    if (time%100 == 0):
         fig = plt.figure(figsize = (20, 10))
-        plt.clf()
-        plt.imshow(sqrt(u[0]**2+u[1]**2).transpose(), cmap = 'magma')
-        plt.xticks([])
-        plt.yticks([])
+        ax = plt.gca()
+        im = ax.imshow(sqrt(u[0]**2+u[1]**2).transpose(), cmap = 'magma')
+        
+        
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size = "5%", pad  = 0.5)
+
+        
+
+        clb = fig.colorbar(im, cax=cax)
+        clb.set_label('Velocity Magnitude', rotation = 270, labelpad = 20)
+        
+        fig.xticks([])
+        fig.yticks([])
+        plt.savefig(frames_dir + "/vel.{0:05d}.png".format(time//100))
         plt.close(fig)
-        plt.savefig("square_sim_frames/vel.{0:05d}.png".format(time//25))
         
 #%%
 imshape = cv2.imread(os.path.join(frames_dir, os.listdir(frames_dir)[0])).shape
@@ -125,7 +139,7 @@ imshape = (imshape[1], imshape[0])
 if not os.path.isdir(frames_dir):
     os.mkdir(frames_dir)
 
-result = cv2.VideoWriter(f'square_simulation_re{Re}t{maxIter}.mp4', 
+result = cv2.VideoWriter(f'square_simulation_re{Re}t{maxIter}_{now}.mp4', 
                          cv2.VideoWriter_fourcc(*'MP4V'),
                          20, imshape)
 
