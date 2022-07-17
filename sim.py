@@ -114,8 +114,8 @@ for time in tqdm(range(maxIter)):
         plt.imshow(sqrt(u[0]**2+u[1]**2).transpose(), cmap = 'magma')
         plt.xticks([])
         plt.yticks([])
-        plt.close(fig)
         plt.savefig("square_sim_frames/vel.{0:05d}.png".format(time//25))
+        plt.close(fig)
         
 #%%
 imshape = cv2.imread(os.path.join(frames_dir, os.listdir(frames_dir)[0])).shape
