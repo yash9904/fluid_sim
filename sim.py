@@ -8,6 +8,9 @@ import numpy as np
 from numpy import array, zeros, fromfunction, sin, roll, sqrt, pi
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+from datetime import datetime
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 #from matplotlib import cm
 from tqdm import tqdm
 
@@ -33,7 +36,8 @@ col1 = array([0, 1, 2])
 col2 = array([3, 4, 5])
 col3 = array([6, 7, 8])
 
-frames_dir = 'square_sim_frames'
+now = datetime.now().strftime("%d%m%Y_%H%M%S")
+frames_dir = 'square_sim_frames' + now
 
 if not(os.path.isdir(frames_dir)):
     os.mkdir(frames_dir)
@@ -63,7 +67,7 @@ def equilibrium(rho, u):              # Equilibrium distribution function.
     #return (x-cx)**2+(y-cy)**2<r**2
 
 def obstacle_fun(x, y):
-    return np.abs(x - cx + y - cy) + np.abs(x - cx - y + cy) <= 50
+    return (np.abs(x - cx + y - cy) + np.abs(x - cx - y + cy) <= 50) + (y == 0) + (y == ny - 1)
 
 
 
@@ -108,13 +112,23 @@ for time in tqdm(range(maxIter)):
         fin[i, :, :] = roll(roll(fout[i, :, :], v[i, 0], axis = 0), v[i, 1], axis = 1)
     
     # Visualization of the velocity.
-    if (time%25 == 0):
+    if (time%100 == 0):
         fig = plt.figure(figsize = (20, 10))
-        plt.clf()
-        plt.imshow(sqrt(u[0]**2+u[1]**2).transpose(), cmap = 'magma')
+        ax = plt.gca()
+        im = ax.imshow(sqrt(u[0]**2+u[1]**2).transpose(), cmap = 'magma')
+        
+        
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size = "5%", pad  = 0.5)
+
+        
+
+        clb = fig.colorbar(im, cax=cax)
+        clb.set_label('Velocity Magnitude', rotation=270)
+        
         plt.xticks([])
         plt.yticks([])
-        plt.savefig("square_sim_frames/vel.{0:05d}.png".format(time//25))
+        plt.savefig(frames_dir + "/vel.{0:05d}.png".format(time//100))
         plt.close(fig)
         
 #%%
